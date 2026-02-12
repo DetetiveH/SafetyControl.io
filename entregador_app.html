@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Entregador - SafetyControl v0.1</title>
+    <title>Entregador - SafetyControl v0.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- Lib para Ler QR Code -->
@@ -29,7 +29,7 @@
                 <input type="text" id="login-input" class="w-full px-4 py-3 rounded-xl text-gray-800" placeholder="Seu Nome (Ex: João)">
                 <button type="submit" class="w-full bg-white text-green-700 font-bold py-4 rounded-xl shadow-lg hover:bg-green-50">ENTRAR</button>
             </form>
-            <p class="mt-8 text-xs text-green-200 opacity-60">SafetyControl v0.1</p>
+            <p class="mt-8 text-xs text-green-200 opacity-60">SafetyControl v0.3</p>
         </div>
 
         <!-- APP PRINCIPAL -->
@@ -70,6 +70,8 @@
                             <p class="text-xs text-gray-400 uppercase font-bold mt-2">Itens</p>
                             <ul id="scan-items-list" class="text-sm list-disc pl-4 text-gray-700"></ul>
                             <input type="hidden" id="scan-delivery-id">
+                            <!-- Novo campo para armazenar o ID do funcionário vindo do QR Code -->
+                            <input type="hidden" id="scan-emp-id">
                         </div>
 
                         <!-- Fallback Manual (Se não usar QR) -->
@@ -179,7 +181,6 @@
         function onScanSuccess(decodedText, decodedResult) {
             stopQRScan();
             try {
-                // Tenta parsear JSON do QR
                 const data = JSON.parse(decodedText);
                 if(data.id) {
                     loadDeliveryFromID(data.id);
@@ -187,7 +188,6 @@
                     alert("QR Code inválido: " + decodedText);
                 }
             } catch(e) {
-                // Se não for JSON, assume que é só o ID
                 loadDeliveryFromID(decodedText);
             }
         }
@@ -197,12 +197,13 @@
             const delivery = pending.find(d => d.id === id);
 
             if(delivery && delivery.status === 'Pendente') {
-                // Modo QR Code Ativado
                 $('scanned-data-area').classList.remove('hidden');
                 $('manual-data-area').classList.add('hidden');
                 
                 $('scan-emp-name').innerText = delivery.empName;
                 $('scan-delivery-id').value = delivery.id;
+                // Salvar o ID do funcionário para conectar com o Admin
+                $('scan-emp-id').value = delivery.empId || ''; 
                 
                 const list = $('scan-items-list');
                 list.innerHTML = '';
@@ -214,7 +215,7 @@
             }
         }
 
-        // --- LÓGICA MANUAL (FALLBACK) ---
+        // --- LÓGICA MANUAL ---
         function loadEPIs() {
             const inv = getDB('sc_inventory');
             const sel = $('epi-select');
@@ -271,17 +272,18 @@
 
         // --- CONFIRMAÇÃO ---
         function confirmDelivery() {
-            // Validações
             if(!currentPhotoData) { alert("Foto do documento obrigatória."); return; }
             if(!hasSignature) { if(!confirm("Sem assinatura digital. Continuar?")) return; }
 
             const deliveryId = $('scan-delivery-id').value;
+            const empIdFromScan = $('scan-emp-id').value; // ID do funcionário vindo do scan
+            
             let logs = getDB('sc_logs');
             let itemsToProcess = [];
             let empName = '';
+            let finalEmpId = null;
 
             if(deliveryId) {
-                // Processo via QR
                 const pending = getDB('sc_pending_deliveries');
                 const idx = pending.findIndex(d => d.id === deliveryId);
                 if(idx > -1) {
@@ -289,9 +291,9 @@
                     setDB('sc_pending_deliveries', pending);
                     itemsToProcess = pending[idx].items;
                     empName = pending[idx].empName;
+                    finalEmpId = empIdFromScan; // Usa o ID capturado
                 }
             } else {
-                // Processo Manual
                 const empManual = $('employee-manual').value;
                 const epiId = $('epi-select').value;
                 if(!empManual || !epiId) { alert("Preencha os dados manuais."); return; }
@@ -299,6 +301,7 @@
                 const item = inv.find(i => i.id == epiId);
                 itemsToProcess.push({ id: item.id, name: item.name, qty: 1 });
                 empName = empManual;
+                // Manualmente não temos ID garantido, fica null ou tenta buscar pelo nome se quisesse
             }
 
             // Baixar Estoque e Criar Log
@@ -313,6 +316,7 @@
                 id: Date.now(),
                 deliveryId: deliveryId || 'MANUAL',
                 employee: empName,
+                empId: finalEmpId, // Salva o ID para o Admin filtrar
                 operator: operatorName,
                 items: itemsToProcess,
                 photo: currentPhotoData,
@@ -321,7 +325,6 @@
             });
             setDB('sc_logs', logs);
 
-            // Reset UI
             alert("Entrega Confirmada!");
             location.reload(); 
         }
