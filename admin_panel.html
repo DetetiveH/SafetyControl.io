@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - SafetyControl</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-20 hidden md:flex">
+        <div class="p-6 border-b border-slate-800 flex items-center gap-3">
+            <i class="fas fa-shield-alt text-blue-500 text-2xl"></i>
+            <span class="font-bold text-xl tracking-tight">SafetyControl</span>
+        </div>
+        
+        <nav class="flex-1 p-4 space-y-2">
+            <a href="#" class="flex items-center gap-3 bg-blue-600 text-white p-3 rounded-lg shadow-lg">
+                <i class="fas fa-chart-pie w-6"></i> Dashboard
+            </a>
+            <a href="#" onclick="alert('Recurso em desenvolvimento')" class="flex items-center gap-3 text-slate-400 p-3 rounded-lg hover:bg-slate-800 transition">
+                <i class="fas fa-users w-6"></i> Funcionários
+            </a>
+            <a href="#" onclick="logout()" class="flex items-center gap-3 text-red-400 p-3 rounded-lg hover:bg-slate-800 transition mt-auto">
+                <i class="fas fa-sign-out-alt w-6"></i> Sair
+            </a>
+        </nav>
+
+        <div class="p-4 bg-slate-950">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center font-bold">AD</div>
+                <div>
+                    <p class="text-sm font-bold">Administrador</p>
+                    <p class="text-xs text-slate-500">Logado</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
+        <!-- Header Mobile -->
+        <header class="bg-white p-4 shadow-sm flex justify-between items-center md:hidden">
+            <span class="font-bold text-slate-800"><i class="fas fa-shield-alt text-blue-600"></i> SafetyControl</span>
+            <button onclick="logout()" class="text-red-500"><i class="fas fa-sign-out-alt"></i></button>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-6 md:p-10">
+            <div class="flex justify-between items-end mb-8">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-800">Visão Geral</h1>
+                    <p class="text-slate-500 mt-1">Status do estoque em tempo real.</p>
+                </div>
+                <button onclick="loadData()" class="bg-white border px-4 py-2 rounded-lg text-sm hover:bg-slate-50">
+                    <i class="fas fa-sync-alt mr-2"></i> Atualizar
+                </button>
+            </div>
+
+            <!-- KPIs -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+                    <p class="text-xs font-bold text-gray-400 uppercase">Movimentações</p>
+                    <h3 class="text-3xl font-bold text-slate-800 mt-2" id="kpi-logs">0</h3>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
+                    <p class="text-xs font-bold text-gray-400 uppercase">Críticos</p>
+                    <h3 class="text-3xl font-bold text-slate-800 mt-2" id="kpi-low">0</h3>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+                    <p class="text-xs font-bold text-gray-400 uppercase">Estoque Total</p>
+                    <h3 class="text-3xl font-bold text-slate-800 mt-2" id="kpi-total">0</h3>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Tabela -->
+                <div class="lg:col-span-2 bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                    <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                        <h3 class="font-bold text-lg text-slate-800">Inventário</h3>
+                    </div>
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
+                            <tr>
+                                <th class="p-4">Item</th>
+                                <th class="p-4 text-center">Qtd.</th>
+                                <th class="p-4 text-center">Status</th>
+                                <th class="p-4 text-right">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+
+                <!-- Feed -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                    <div class="p-6 border-b border-slate-100">
+                        <h3 class="font-bold text-lg text-slate-800">Últimas Saídas</h3>
+                    </div>
+                    <div id="activity-feed" class="p-0 overflow-y-auto max-h-[500px]"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const defaultData = [
+            { id: 1, name: 'Capacete Azul', qty: 45, min: 10, icon: 'fa-hard-hat' },
+            { id: 2, name: 'Luvas de Raspa', qty: 12, min: 20, icon: 'fa-mitten' },
+            { id: 3, name: 'Óculos Proteção', qty: 8, min: 15, icon: 'fa-glasses' },
+            { id: 4, name: 'Protetor Auricular', qty: 200, min: 50, icon: 'fa-deaf' },
+            { id: 5, name: 'Botina Seg. 42', qty: 5, min: 5, icon: 'fa-shoe-prints' }
+        ];
+
+        function loadData() {
+            if (!localStorage.getItem('sc_inventory')) {
+                localStorage.setItem('sc_inventory', JSON.stringify(defaultData));
+                localStorage.setItem('sc_logs', JSON.stringify([]));
+            }
+            const inv = JSON.parse(localStorage.getItem('sc_inventory'));
+            const logs = JSON.parse(localStorage.getItem('sc_logs')) || [];
+
+            updateKPIs(inv, logs);
+            renderTable(inv);
+            renderLogs(logs, inv);
+        }
+
+        function updateKPIs(inv, logs) {
+            document.getElementById('kpi-logs').innerText = logs.length;
+            document.getElementById('kpi-low').innerText = inv.filter(i => i.qty <= i.min).length;
+            document.getElementById('kpi-total').innerText = inv.reduce((acc, i) => acc + i.qty, 0);
+        }
+
+        function renderTable(inv) {
+            const tbody = document.getElementById('inventory-table');
+            tbody.innerHTML = '';
+            inv.forEach(item => {
+                const isLow = item.qty <= item.min;
+                const status = isLow ? `<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">Crítico</span>` : `<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">OK</span>`;
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-4 flex items-center gap-3">
+                            <div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-500"><i class="fas ${item.icon}"></i></div>
+                            <span class="font-medium text-slate-700">${item.name}</span>
+                        </td>
+                        <td class="p-4 text-center font-bold ${isLow ? 'text-red-600' : 'text-slate-600'}">${item.qty}</td>
+                        <td class="p-4 text-center">${status}</td>
+                        <td class="p-4 text-right">
+                            <button onclick="addStock(${item.id})" class="text-blue-600 hover:text-blue-800 text-sm font-bold">+ Repor</button>
+                        </td>
+                    </tr>`;
+            });
+        }
+
+        function renderLogs(logs, inv) {
+            const container = document.getElementById('activity-feed');
+            container.innerHTML = '';
+            const recent = [...logs].reverse().slice(0, 15);
+            if(recent.length === 0) container.innerHTML = '<div class="p-6 text-center text-gray-400 text-sm">Nenhuma atividade.</div>';
+            
+            recent.forEach(log => {
+                const item = inv.find(i => i.id == log.itemId);
+                const time = new Date(log.date).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+                container.innerHTML += `
+                    <div class="p-4 border-b border-slate-50 flex items-start gap-3">
+                        <div class="bg-blue-50 text-blue-500 w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs mt-1"><i class="fas fa-user"></i></div>
+                        <div>
+                            <p class="text-sm text-slate-800"><span class="font-bold">${log.employee}</span> retirou <span class="font-bold text-blue-600">${item ? item.name : 'Item'}</span></p>
+                            <p class="text-xs text-slate-400 mt-1">${time} • Entregador: ${log.operator}</p>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function addStock(id) {
+            const qtd = prompt("Adicionar quantos itens?");
+            if(qtd && !isNaN(qtd)) {
+                const inv = JSON.parse(localStorage.getItem('sc_inventory'));
+                const item = inv.find(i => i.id === id);
+                item.qty += parseInt(qtd);
+                localStorage.setItem('sc_inventory', JSON.stringify(inv));
+                loadData();
+            }
+        }
+
+        function logout() {
+            if(confirm('Deseja sair do painel?')) {
+                window.location.href = 'index.html';
+            }
+        }
+
+        window.onload = loadData;
+        setInterval(loadData, 3000); // Auto-atualização para ver mudanças feitas pelo app
+    </script>
+</body>
+</html>
