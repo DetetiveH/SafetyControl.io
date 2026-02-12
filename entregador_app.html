@@ -3,183 +3,334 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Entregador - SafetyControl</title>
+    <title>Entregador - SafetyControl v0.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Lib para Ler QR Code -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    
     <style>
         body { background-color: #f0fdf4; font-family: 'Inter', sans-serif; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col items-center bg-gray-100">
 
-    <!-- Header -->
-    <header class="bg-green-600 text-white p-5 shadow-lg rounded-b-3xl z-10 sticky top-0">
-        <div class="flex justify-between items-center mb-4">
-            <h1 class="font-bold text-xl flex items-center gap-2">
-                <i class="fas fa-truck-loading"></i> App Entrega
-            </h1>
-            <button onclick="logout()" class="bg-green-700 p-2 rounded-lg text-xs font-bold hover:bg-green-800">SAIR</button>
-        </div>
+    <div class="w-full max-w-md bg-gray-50 min-h-screen shadow-2xl flex flex-col relative overflow-hidden">
         
-        <div class="flex items-center gap-3 bg-green-700/50 p-3 rounded-xl backdrop-blur-sm">
-            <div class="w-10 h-10 rounded-full bg-white text-green-700 flex items-center justify-center font-bold"><i class="fas fa-user"></i></div>
-            <div>
-                <p class="text-xs text-green-100 uppercase tracking-wide">Operador</p>
-                <p class="font-bold text-lg leading-none" id="operator-name">...</p>
+        <!-- TELA DE LOGIN -->
+        <div id="login-screen" class="absolute inset-0 z-50 bg-green-600 flex flex-col items-center justify-center p-6 text-white transition-transform duration-300">
+            <div class="mb-8 text-center">
+                <div class="w-20 h-20 bg-white text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl shadow-lg"><i class="fas fa-user-lock"></i></div>
+                <h2 class="text-3xl font-bold">Identifique-se</h2>
             </div>
-        </div>
-    </header>
-
-    <!-- Conteúdo -->
-    <main class="flex-1 p-5 -mt-2">
-        <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
-            <h2 class="text-gray-800 font-bold text-lg mb-4 border-b pb-2">Nova Retirada</h2>
-            <form id="delivery-form" onsubmit="event.preventDefault(); submitDelivery();" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Quem vai receber?</label>
-                    <div class="relative">
-                        <i class="fas fa-id-card absolute left-4 top-4 text-gray-400"></i>
-                        <input type="text" id="employee" required class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 focus:ring-2 focus:ring-green-500 outline-none" placeholder="Nome ou Matrícula">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Qual EPI?</label>
-                    <div class="relative">
-                        <i class="fas fa-box absolute left-4 top-4 text-gray-400"></i>
-                        <select id="epi-select" required onchange="checkStock(this.value)" class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 focus:ring-2 focus:ring-green-500 outline-none appearance-none bg-white">
-                            <option value="" disabled selected>Selecionar Item...</option>
-                        </select>
-                        <i class="fas fa-chevron-down absolute right-4 top-4 text-gray-400 pointer-events-none"></i>
-                    </div>
-                    <div id="stock-indicator" class="flex justify-end mt-1 opacity-0 transition-opacity">
-                        <span class="text-xs font-bold bg-gray-100 px-2 py-0.5 rounded text-gray-500">Estoque: <span id="stock-qty">0</span></span>
-                    </div>
-                </div>
-
-                <button type="submit" class="w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-green-700 active:scale-95 transition-transform flex items-center justify-center gap-2 mt-2">
-                    CONFIRMAR ENTREGA <i class="fas fa-check-circle"></i>
-                </button>
+            <form onsubmit="event.preventDefault(); internalLogin();" class="w-full space-y-4">
+                <input type="text" id="login-input" class="w-full px-4 py-3 rounded-xl text-gray-800" placeholder="Seu Nome (Ex: João)">
+                <button type="submit" class="w-full bg-white text-green-700 font-bold py-4 rounded-xl shadow-lg hover:bg-green-50">ENTRAR</button>
             </form>
+            <p class="mt-8 text-xs text-green-200 opacity-60">SafetyControl v0.1</p>
         </div>
 
-        <h3 class="text-gray-400 text-xs font-bold uppercase mb-3 ml-2">Suas Entregas Hoje</h3>
-        <div id="local-history" class="space-y-3 pb-10"></div>
-    </main>
+        <!-- APP PRINCIPAL -->
+        <div id="app-content" class="flex-1 flex flex-col w-full hidden opacity-0 transition-opacity duration-500">
+            <!-- Header -->
+            <header class="bg-green-600 text-white p-5 shadow-lg rounded-b-3xl z-10 sticky top-0">
+                <div class="flex justify-between items-center mb-4">
+                    <h1 class="font-bold text-xl flex items-center gap-2"><i class="fas fa-truck-loading"></i> Entrega</h1>
+                    <button onclick="logout()" class="bg-green-700 p-2 text-xs font-bold rounded">SAIR</button>
+                </div>
+                <div class="flex items-center gap-3 bg-green-700/50 p-2 rounded-xl">
+                    <div class="w-8 h-8 rounded-full bg-white text-green-700 flex items-center justify-center font-bold"><i class="fas fa-user"></i></div>
+                    <p class="font-bold text-sm" id="operator-name">...</p>
+                </div>
+            </header>
+
+            <!-- Conteúdo -->
+            <main class="flex-1 p-5 -mt-2 pb-20 overflow-y-auto">
+                
+                <!-- Botão Ler QR -->
+                <button onclick="startQRScan()" class="w-full bg-blue-600 text-white p-4 rounded-xl shadow-lg mb-6 flex items-center justify-center gap-3 hover:bg-blue-700 transition">
+                    <i class="fas fa-qrcode text-2xl"></i>
+                    <span class="font-bold text-lg">Ler QR Code da Entrega</span>
+                </button>
+
+                <!-- Área de Confirmação de Entrega -->
+                <div class="bg-white rounded-2xl shadow-xl p-6 mb-6 border border-gray-100">
+                    <h2 class="text-gray-800 font-bold text-lg mb-4 border-b pb-2 flex items-center gap-2">
+                        <i class="fas fa-clipboard-check text-green-500"></i> Dados da Entrega
+                    </h2>
+                    
+                    <form id="delivery-form" onsubmit="event.preventDefault(); confirmDelivery();" class="space-y-4">
+                        
+                        <!-- Dados Automáticos (Readonly) -->
+                        <div id="scanned-data-area" class="bg-gray-50 p-3 rounded-lg border border-dashed border-gray-300 mb-4 hidden">
+                            <p class="text-xs text-gray-400 uppercase font-bold">Funcionário</p>
+                            <p class="font-bold text-gray-800 text-lg" id="scan-emp-name">-</p>
+                            <p class="text-xs text-gray-400 uppercase font-bold mt-2">Itens</p>
+                            <ul id="scan-items-list" class="text-sm list-disc pl-4 text-gray-700"></ul>
+                            <input type="hidden" id="scan-delivery-id">
+                        </div>
+
+                        <!-- Fallback Manual (Se não usar QR) -->
+                        <div id="manual-data-area">
+                            <label class="label-tiny">Funcionário</label>
+                            <input type="text" id="employee-manual" class="input-std" placeholder="Nome Completo">
+                            
+                            <label class="label-tiny mt-2">EPI</label>
+                            <select id="epi-select" class="input-std mb-2"><option>Selecione...</option></select>
+                        </div>
+
+                        <!-- Evidências (Obrigatórias) -->
+                        <div>
+                            <label class="label-tiny">Foto da Assinatura (Obrigatório)</label>
+                            <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-xl cursor-pointer bg-gray-50 relative group">
+                                <div class="text-center" id="upload-placeholder">
+                                    <i class="fas fa-camera text-gray-400 text-2xl"></i>
+                                    <p class="text-xs text-gray-500 mt-1">Fotografar Documento</p>
+                                </div>
+                                <img id="preview-image" class="absolute inset-0 w-full h-full object-cover hidden rounded-xl" />
+                                <input type="file" id="photo-input" accept="image/*" capture="environment" class="hidden" onchange="previewFile()">
+                            </label>
+                        </div>
+
+                        <!-- Assinatura Digital -->
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <label class="label-tiny">Assinatura Digital</label>
+                                <button type="button" onclick="clearSignature()" class="text-[10px] text-red-500 font-bold"><i class="fas fa-eraser"></i> Limpar</button>
+                            </div>
+                            <div class="border border-gray-300 rounded-xl bg-white overflow-hidden relative h-32">
+                                <canvas id="signature-pad" class="w-full h-full cursor-crosshair touch-none"></canvas>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-green-700 text-lg flex justify-center items-center gap-2">
+                            CONFIRMAR <i class="fas fa-check-circle"></i>
+                        </button>
+                    </form>
+                </div>
+
+                <h3 class="text-gray-400 text-xs font-bold uppercase mb-3 ml-2">Histórico Local</h3>
+                <div id="local-history" class="space-y-3 pb-10"></div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal Scanner QR Code -->
+    <div id="qr-modal" class="fixed inset-0 bg-black z-[60] hidden flex flex-col">
+        <div class="flex justify-between items-center p-4 text-white bg-black">
+            <h3 class="font-bold">Escanear Declaração</h3>
+            <button onclick="stopQRScan()" class="text-red-500 font-bold">FECHAR</button>
+        </div>
+        <div id="reader" class="flex-1 bg-black w-full"></div>
+        <div class="p-4 bg-black text-center text-gray-400 text-xs">Aponte para o QR Code gerado no Painel Admin</div>
+    </div>
 
     <!-- Toast -->
-    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 opacity-0 translate-y-10 z-40 pointer-events-none whitespace-nowrap">
-        <i class="fas fa-check text-green-400"></i>
-        <span>Entrega registrada!</span>
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl opacity-0 translate-y-10 z-50 pointer-events-none transition-all">
+        <i class="fas fa-check text-green-400 mr-2"></i> Sucesso!
     </div>
 
     <script>
-        let db = [];
+        // --- UTILITÁRIOS ---
+        const $ = (id) => document.getElementById(id);
+        const getDB = (k) => JSON.parse(localStorage.getItem(k)) || [];
+        const setDB = (k, v) => localStorage.setItem(k, JSON.stringify(v));
         let operatorName = '';
+        let currentPhotoData = null;
+        let html5QrCode;
 
+        // --- AUTH ---
+        function internalLogin() {
+            const name = $('login-input').value;
+            if(name.length > 2) { sessionStorage.setItem('sc_operator', name); checkAuth(); }
+        }
         function checkAuth() {
-            // Verifica se veio do login ou tem sessão ativa
-            const storedUser = sessionStorage.getItem('sc_operator');
-            if (!storedUser) {
-                alert('Por favor, faça login primeiro.');
-                window.location.href = 'index.html';
-                return;
+            const user = sessionStorage.getItem('sc_operator');
+            if(user) {
+                operatorName = user;
+                $('operator-name').innerText = user;
+                $('login-screen').classList.add('-translate-y-full');
+                $('app-content').classList.remove('hidden');
+                setTimeout(() => { $('app-content').classList.remove('opacity-0'); resizeCanvas(); }, 100);
+                loadEPIs();
             }
-            operatorName = storedUser;
-            document.getElementById('operator-name').innerText = operatorName;
-            loadInventory();
+        }
+        function logout() { sessionStorage.removeItem('sc_operator'); location.reload(); }
+
+        // --- LEITOR QR CODE ---
+        function startQRScan() {
+            $('qr-modal').classList.remove('hidden');
+            html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                onScanSuccess,
+                (errorMessage) => { /* ignore errors */ }
+            ).catch(err => alert("Erro câmera: " + err));
         }
 
-        function loadInventory() {
-            // Se não existir dados, cria dummy data (caso entre direto sem admin ter criado)
-            if(!localStorage.getItem('sc_inventory')) {
-                const defaultData = [
-                    { id: 1, name: 'Capacete Azul', qty: 45, min: 10 },
-                    { id: 2, name: 'Luvas de Raspa', qty: 12, min: 20 }
-                ];
-                localStorage.setItem('sc_inventory', JSON.stringify(defaultData));
-            }
-            db = JSON.parse(localStorage.getItem('sc_inventory'));
-            populateSelect();
+        function stopQRScan() {
+            if(html5QrCode) html5QrCode.stop().then(() => $('qr-modal').classList.add('hidden'));
+            else $('qr-modal').classList.add('hidden');
         }
 
-        function populateSelect() {
-            const select = document.getElementById('epi-select');
-            select.innerHTML = '<option value="" disabled selected>Selecionar Item...</option>';
-            db.forEach(item => {
-                const opt = document.createElement('option');
-                opt.value = item.id;
-                opt.text = item.name;
-                if(item.qty <= 0) {
-                    opt.disabled = true;
-                    opt.text += " (ESGOTADO)";
+        function onScanSuccess(decodedText, decodedResult) {
+            stopQRScan();
+            try {
+                // Tenta parsear JSON do QR
+                const data = JSON.parse(decodedText);
+                if(data.id) {
+                    loadDeliveryFromID(data.id);
+                } else {
+                    alert("QR Code inválido: " + decodedText);
                 }
-                select.appendChild(opt);
-            });
-        }
-
-        function checkStock(id) {
-            const item = db.find(i => i.id == id);
-            const indicator = document.getElementById('stock-indicator');
-            const qtySpan = document.getElementById('stock-qty');
-            if(item) {
-                indicator.classList.remove('opacity-0');
-                qtySpan.innerText = item.qty;
-                qtySpan.parentElement.className = item.qty < 10 ? "text-xs font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded" : "text-xs font-bold bg-green-100 text-green-600 px-2 py-0.5 rounded";
+            } catch(e) {
+                // Se não for JSON, assume que é só o ID
+                loadDeliveryFromID(decodedText);
             }
         }
 
-        function submitDelivery() {
-            const emp = document.getElementById('employee').value;
-            const epiId = document.getElementById('epi-select').value;
-            if(!epiId || !emp) return;
+        function loadDeliveryFromID(id) {
+            const pending = getDB('sc_pending_deliveries');
+            const delivery = pending.find(d => d.id === id);
 
-            const idx = db.findIndex(i => i.id == epiId);
-            if(db[idx].qty > 0) {
-                db[idx].qty--;
-                localStorage.setItem('sc_inventory', JSON.stringify(db)); // Salva global
+            if(delivery && delivery.status === 'Pendente') {
+                // Modo QR Code Ativado
+                $('scanned-data-area').classList.remove('hidden');
+                $('manual-data-area').classList.add('hidden');
                 
-                const logs = JSON.parse(localStorage.getItem('sc_logs')) || [];
-                logs.push({
-                    id: Date.now(),
-                    itemId: epiId,
-                    employee: emp,
-                    operator: operatorName,
-                    date: new Date().toISOString()
-                });
-                localStorage.setItem('sc_logs', JSON.stringify(logs));
-
-                showToast();
-                document.getElementById('delivery-form').reset();
-                document.getElementById('stock-indicator').classList.add('opacity-0');
-                addToLocalHistory(emp, db[idx].name);
-                populateSelect();
+                $('scan-emp-name').innerText = delivery.empName;
+                $('scan-delivery-id').value = delivery.id;
+                
+                const list = $('scan-items-list');
+                list.innerHTML = '';
+                delivery.items.forEach(i => list.innerHTML += `<li>${i.name} (Qtd: ${i.qty})</li>`);
+                
+                alert("Entrega localizada! Tire a foto e assine para confirmar.");
             } else {
-                alert("Erro: Item sem estoque.");
+                alert("Entrega não encontrada ou já finalizada.");
             }
         }
 
-        function addToLocalHistory(emp, item) {
-            const container = document.getElementById('local-history');
-            const div = document.createElement('div');
-            div.className = "bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500 flex justify-between items-center animate-pulse";
-            div.innerHTML = `<div><p class="font-bold text-gray-800">${emp}</p><p class="text-xs text-gray-500">${item}</p></div><i class="fas fa-check text-green-500"></i>`;
-            container.prepend(div);
-            setTimeout(() => div.classList.remove('animate-pulse'), 500);
+        // --- LÓGICA MANUAL (FALLBACK) ---
+        function loadEPIs() {
+            const inv = getDB('sc_inventory');
+            const sel = $('epi-select');
+            sel.innerHTML = '<option value="">Selecione...</option>';
+            inv.forEach(i => sel.innerHTML += `<option value="${i.id}">${i.name}</option>`);
         }
 
-        function showToast() {
-            const t = document.getElementById('toast');
-            t.classList.remove('opacity-0', 'translate-y-10');
-            setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000);
+        // --- ASSINATURA ---
+        const canvas = $('signature-pad');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false, hasSignature = false;
+
+        function resizeCanvas() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            ctx.lineWidth = 2;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        canvas.addEventListener('mousedown', start);
+        canvas.addEventListener('touchstart', start, {passive: false});
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('touchmove', draw, {passive: false});
+        canvas.addEventListener('mouseup', stop);
+        canvas.addEventListener('touchend', stop);
+
+        function start(e) { isDrawing = true; hasSignature = true; draw(e); }
+        function stop() { isDrawing = false; ctx.beginPath(); }
+        function draw(e) {
+            if(!isDrawing) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+            const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+        function clearSignature() { ctx.clearRect(0,0,canvas.width,canvas.height); hasSignature = false; }
+
+        // --- FOTO ---
+        function previewFile() {
+            const file = $('photo-input').files[0];
+            const reader = new FileReader();
+            reader.onload = e => {
+                $('preview-image').src = e.target.result;
+                $('preview-image').classList.remove('hidden');
+                $('upload-placeholder').classList.add('hidden');
+                currentPhotoData = e.target.result;
+            }
+            if(file) reader.readAsDataURL(file);
         }
 
-        function logout() {
-            sessionStorage.removeItem('sc_operator');
-            window.location.href = 'index.html';
+        // --- CONFIRMAÇÃO ---
+        function confirmDelivery() {
+            // Validações
+            if(!currentPhotoData) { alert("Foto do documento obrigatória."); return; }
+            if(!hasSignature) { if(!confirm("Sem assinatura digital. Continuar?")) return; }
+
+            const deliveryId = $('scan-delivery-id').value;
+            let logs = getDB('sc_logs');
+            let itemsToProcess = [];
+            let empName = '';
+
+            if(deliveryId) {
+                // Processo via QR
+                const pending = getDB('sc_pending_deliveries');
+                const idx = pending.findIndex(d => d.id === deliveryId);
+                if(idx > -1) {
+                    pending[idx].status = 'Finalizado';
+                    setDB('sc_pending_deliveries', pending);
+                    itemsToProcess = pending[idx].items;
+                    empName = pending[idx].empName;
+                }
+            } else {
+                // Processo Manual
+                const empManual = $('employee-manual').value;
+                const epiId = $('epi-select').value;
+                if(!empManual || !epiId) { alert("Preencha os dados manuais."); return; }
+                const inv = getDB('sc_inventory');
+                const item = inv.find(i => i.id == epiId);
+                itemsToProcess.push({ id: item.id, name: item.name, qty: 1 });
+                empName = empManual;
+            }
+
+            // Baixar Estoque e Criar Log
+            const inv = getDB('sc_inventory');
+            itemsToProcess.forEach(i => {
+                const stockItem = inv.find(x => x.id == i.id);
+                if(stockItem) stockItem.qty -= i.qty;
+            });
+            setDB('sc_inventory', inv);
+
+            logs.push({
+                id: Date.now(),
+                deliveryId: deliveryId || 'MANUAL',
+                employee: empName,
+                operator: operatorName,
+                items: itemsToProcess,
+                photo: currentPhotoData,
+                signature: hasSignature ? canvas.toDataURL() : null,
+                date: new Date().toISOString()
+            });
+            setDB('sc_logs', logs);
+
+            // Reset UI
+            alert("Entrega Confirmada!");
+            location.reload(); 
         }
 
-        window.onload = checkAuth;
+        checkAuth();
     </script>
+    <style>
+        .label-tiny { @apply block text-xs font-bold text-gray-400 uppercase mb-1; }
+        .input-std { @apply w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-green-500 outline-none; }
+    </style>
 </body>
 </html>
