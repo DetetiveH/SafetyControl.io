@@ -288,8 +288,8 @@
         </div>
     </div>
 
-    <!-- Área oculta para gerar QR Code para o PDF -->
-    <div id="qrcode-container" class="hidden"></div>
+    <!-- Área oculta para gerar QR Code para o PDF (Corrigido display:none) -->
+    <div id="qrcode-container" style="position: absolute; left: -9999px; top: -9999px;"></div>
 
     <script>
         // --- UTILITÁRIOS ---
@@ -484,7 +484,7 @@
         }
 
         async function printDeclaration(d) {
-            // 1. Gerar QR Code em container oculto
+            // 1. Gerar QR Code em container fora da tela (CORREÇÃO DE BUG TELA BRANCA)
             const qrContainer = $('qrcode-container');
             qrContainer.innerHTML = '';
             
@@ -514,6 +514,7 @@
             const doc = new jsPDF();
             
             // Configurações
+            doc.setTextColor(0, 0, 0); // Garantir preto
             const margin = 20;
             let y = 20;
             const pageWidth = doc.internal.pageSize.getWidth();
@@ -529,7 +530,7 @@
             doc.setFontSize(10);
             doc.setFont("helvetica", "normal");
             
-            const introText = `Eu, ${d.empName}, portador(a) do CPF nº ${d.empCPF}, declaro, para todos os efeitos previstos na legislação trabalhista, haver recebido gratuitamente da empresa Terceriza Condomínios Ltda, conforme disposto nos artigos 166 e 167 da C.L.T., na NR-06 (Equipamentos de Proteção Individual) e nos itens 1.4.2 e 1.5.5.1.2 da NR-01 – Disposições Gerais e Gerenciamento de Riscos Ocupacionais, após treinamento e orientação quanto ao uso adequado, aplicação, guarda, conservação, substituição e requisitos de higiene, em palestra realizada pelo Serviço Especializado em Segurança e Medicina do Trabalho – SESMT, o(s) Equipamento(s) de Proteção Individual abaixo descrito(s), doravante designado(s) como EPI(s), obrigando-me a utilizá-lo(s) sistematicamente no exercício de minhas atividades.`;
+            const introText = `Eu, ${d.empName}, portador(a) do CPF nº ${d.empCPF || 'Não informado'}, declaro, para todos os efeitos previstos na legislação trabalhista, haver recebido gratuitamente da empresa Terceriza Condomínios Ltda, conforme disposto nos artigos 166 e 167 da C.L.T., na NR-06 (Equipamentos de Proteção Individual) e nos itens 1.4.2 e 1.5.5.1.2 da NR-01 – Disposições Gerais e Gerenciamento de Riscos Ocupacionais, após treinamento e orientação quanto ao uso adequado, aplicação, guarda, conservação, substituição e requisitos de higiene, em palestra realizada pelo Serviço Especializado em Segurança e Medicina do Trabalho – SESMT, o(s) Equipamento(s) de Proteção Individual abaixo descrito(s), doravante designado(s) como EPI(s), obrigando-me a utilizá-lo(s) sistematicamente no exercício de minhas atividades.`;
             
             const splitIntro = doc.splitTextToSize(introText, maxLineWidth);
             doc.text(splitIntro, margin, y);
@@ -551,7 +552,7 @@
             // Itens
             doc.setFont("helvetica", "normal");
             d.items.forEach(item => {
-                doc.text(item.name, margin + 2, y);
+                doc.text(item.name || 'Item', margin + 2, y);
                 doc.text(item.qty.toString(), pageWidth - margin - 5, y, { align: "right" });
                 doc.setDrawColor(200, 200, 200);
                 doc.line(margin, y + 1, pageWidth - margin, y + 1);
