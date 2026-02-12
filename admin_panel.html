@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - SafetyControl v0.3</title>
+    <title>Admin - SafetyControl v0.4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- Fonte para assinatura -->
@@ -65,7 +65,7 @@
         </nav>
 
         <div class="p-4 bg-slate-950 text-xs text-center text-slate-600">
-            Versão 0.3
+            Versão 0.4
         </div>
     </aside>
 
@@ -155,7 +155,7 @@
                 </div>
             </div>
 
-            <!-- VIEW: FUNCIONÁRIOS (Atualizado v0.3) -->
+            <!-- VIEW: FUNCIONÁRIOS -->
             <div id="view-employees" class="view-section hidden fade-in pb-10">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
                     <div>
@@ -345,7 +345,7 @@
         </div>
     </div>
 
-    <!-- Modal Histórico de Entregas (NOVO v0.3) -->
+    <!-- Modal Histórico de Entregas -->
     <div id="historyModal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex items-center justify-center z-50 backdrop-blur-sm p-4 no-print overflow-y-auto">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl min-h-[500px] flex flex-col transform transition-all m-auto">
             <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
@@ -570,7 +570,7 @@
             }
         }
 
-        // --- HISTÓRICO DE ENTREGAS (NOVO v0.3) ---
+        // --- HISTÓRICO DE ENTREGAS ---
         function openHistory(empId) {
             const employees = getDB('sc_employees');
             const emp = employees.find(e => e.id == empId);
@@ -581,7 +581,6 @@
             $('hist-modal-subtitle').innerText = `CPF: ${emp.cpf}`;
 
             const logs = getDB('sc_logs');
-            // Filtra por ID (se disponível no log) ou Nome como fallback
             const userLogs = logs.filter(l => (l.empId && l.empId == empId) || l.employee === emp.name);
             
             const list = $('history-list');
@@ -598,7 +597,6 @@
                     const hasSign = log.signature ? '<span class="text-green-600"><i class="fas fa-check-circle"></i> Digital</span>' : '<span class="text-gray-400">Manual</span>';
                     const hasPhoto = log.photo ? '<span class="text-green-600"><i class="fas fa-camera"></i> Sim</span>' : '<span class="text-gray-400">Não</span>';
 
-                    // Botão PDF: Se tiver assinatura, gera o PDF completo. Se não, apenas declaração.
                     const btnAction = log.signature 
                         ? `<button onclick="printSignedLog(${log.id})" class="text-blue-600 hover:text-blue-800 font-bold text-xs border border-blue-200 px-2 py-1 rounded bg-blue-50">PDF Assinado</button>`
                         : `<span class="text-gray-400 text-xs">Pendente</span>`;
@@ -624,9 +622,7 @@
             const log = logs.find(l => l.id == logId);
             if(!log) return;
 
-            // Busca dados atuais do funcionário para preencher lacunas se necessário
             const employees = getDB('sc_employees');
-            // Tenta achar pelo nome salvo no log ou empId
             const emp = employees.find(e => e.name === log.employee) || { name: log.employee, cpf: 'Não informado', role: 'Não informado' };
 
             const { jsPDF } = window.jspdf;
@@ -675,7 +671,7 @@
             });
             y += 10;
 
-            // --- ASSINATURA DIGITAL ---
+            // --- ASSINATURA ---
             if(log.signature) {
                 doc.setFont("helvetica", "bold");
                 doc.text("Assinatura Digital do Recebedor:", margin, y);
@@ -684,20 +680,19 @@
                 y += 35;
             }
 
-            // --- FOTO DE EVIDÊNCIA ---
+            // --- FOTO ---
             if(log.photo) {
                 if (y + 100 > 280) { doc.addPage(); y = 20; }
                 doc.setFont("helvetica", "bold");
                 doc.text("Foto de Evidência (Documento/Entrega):", margin, y);
                 y += 5;
-                // Ajustar proporção da imagem é complexo sem saber dimensões, usando fixo por enquanto
                 doc.addImage(log.photo, 'PNG', margin, y, 100, 100); 
             }
 
             doc.save(`Comprovante_${emp.name.replace(/\s+/g, '_')}_${log.id}.pdf`);
         }
 
-        // --- GESTÃO DE ENTREGA ---
+        // --- GESTÃO DE ENTREGA (ATUALIZADO v0.4) ---
         function loadDeliveryManagement() {
             const emps = getDB('sc_employees');
             const select = $('delivery-employee');
@@ -896,6 +891,7 @@
             doc.save(`Declaracao_EPI_${d.empName.replace(/\s+/g, '_')}.pdf`);
         }
 
+        // --- ATUALIZAÇÃO PARA BOTÃO CONFIRMAR ---
         function loadPendingDeliveries() {
             const list = getDB('sc_pending_deliveries');
             const container = $('pending-deliveries-list');
@@ -905,6 +901,18 @@
 
             list.slice().reverse().forEach(d => {
                 const color = d.status === 'Pendente' ? 'border-l-4 border-yellow-500' : 'border-l-4 border-green-500 opacity-60';
+                
+                // Botões de ação (Novo)
+                let actions = '';
+                if(d.status === 'Pendente') {
+                    actions = `
+                        <div class="mt-3 flex gap-2">
+                            <button onclick="reprint('${d.id}')" class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-200 hover:bg-blue-100 transition">Baixar PDF</button>
+                            <button onclick="confirmManualDelivery('${d.id}')" class="text-xs bg-green-50 text-green-600 px-2 py-1 rounded border border-green-200 hover:bg-green-100 transition font-bold">Confirmar Entrega</button>
+                        </div>
+                    `;
+                }
+
                 container.innerHTML += `
                     <div class="bg-white p-4 border-b ${color} hover:bg-gray-50 transition">
                         <div class="flex justify-between items-start">
@@ -917,10 +925,53 @@
                         <div class="mt-2 text-xs text-gray-600">
                             ${d.items.map(i => `• ${i.name} (x${i.qty})`).join('<br>')}
                         </div>
-                        ${d.status === 'Pendente' ? `<button onclick="reprint('${d.id}')" class="mt-2 text-xs text-blue-600 hover:underline">Baixar PDF</button>` : ''}
+                        ${actions}
                     </div>
                 `;
             });
+        }
+
+        function confirmManualDelivery(id) {
+            if(!confirm("Tem certeza que deseja confirmar esta entrega manualmente? O estoque será descontado.")) return;
+
+            const pending = getDB('sc_pending_deliveries');
+            const index = pending.findIndex(d => d.id === id);
+            
+            if(index > -1) {
+                const delivery = pending[index];
+                
+                // 1. Baixar Estoque
+                const inv = getDB('sc_inventory');
+                delivery.items.forEach(item => {
+                    const stockItem = inv.find(x => x.id == item.id);
+                    if(stockItem) stockItem.qty -= item.qty;
+                });
+                setDB('sc_inventory', inv);
+
+                // 2. Criar Log (Sem assinatura/foto pois é manual pelo admin)
+                const logs = getDB('sc_logs');
+                logs.push({
+                    id: Date.now(),
+                    deliveryId: delivery.id,
+                    employee: delivery.empName,
+                    empId: delivery.empId,
+                    operator: 'Admin (Manual)',
+                    items: delivery.items,
+                    photo: null,
+                    signature: null,
+                    date: new Date().toISOString()
+                });
+                setDB('sc_logs', logs);
+
+                // 3. Atualizar Status
+                pending[index].status = 'Finalizado';
+                setDB('sc_pending_deliveries', pending);
+
+                // 4. Atualizar UI
+                loadPendingDeliveries();
+                loadDashboard(); // Atualiza KPIs
+                alert("Entrega confirmada com sucesso!");
+            }
         }
 
         function reprint(id) {
