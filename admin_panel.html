@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - SafetyControl v0.2</title>
+    <title>Admin - SafetyControl v0.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- Fonte para assinatura -->
@@ -22,7 +22,6 @@
         .scroller::-webkit-scrollbar-track { background-color: #f1f5f9; }
         .signature-font { font-family: 'Dancing Script', cursive; font-size: 1.2rem; color: #1e40af; }
 
-        /* Estilos de Impressão */
         @media print {
             body * { visibility: hidden; }
             #print-area, #print-area * { visibility: visible; }
@@ -66,7 +65,7 @@
         </nav>
 
         <div class="p-4 bg-slate-950 text-xs text-center text-slate-600">
-            Versão 0.2
+            Versão 0.3
         </div>
     </aside>
 
@@ -126,7 +125,7 @@
                 </div>
             </div>
 
-            <!-- VIEW: CADASTRAR EPIs (NOVO) -->
+            <!-- VIEW: CADASTRAR EPIs -->
             <div id="view-epis" class="view-section hidden fade-in pb-10">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
                     <div>
@@ -156,12 +155,12 @@
                 </div>
             </div>
 
-            <!-- VIEW: FUNCIONÁRIOS -->
+            <!-- VIEW: FUNCIONÁRIOS (Atualizado v0.3) -->
             <div id="view-employees" class="view-section hidden fade-in pb-10">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
                     <div>
                         <h1 class="text-2xl md:text-3xl font-bold text-slate-800">Funcionários</h1>
-                        <p class="text-slate-500 mt-1">Gestão de equipe e cadastros.</p>
+                        <p class="text-slate-500 mt-1">Gestão de equipe e histórico de entregas.</p>
                     </div>
                     <button onclick="openEmployeeModal()" class="bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm hover:bg-blue-700 shadow-md font-medium flex items-center">
                         <i class="fas fa-plus mr-2"></i> Novo Funcionário
@@ -196,7 +195,7 @@
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <!-- Formulário de Nova Entrega -->
+                    <!-- Formulário -->
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                         <h3 class="font-bold text-lg mb-4 border-b pb-2">Nova Solicitação de EPI</h3>
                         <form onsubmit="event.preventDefault(); generateDeliveryOrder();">
@@ -211,7 +210,7 @@
                             <div class="mb-4">
                                 <label class="block text-sm font-bold text-gray-700 mb-2">Selecione os EPIs e a Quantidade</label>
                                 <div id="delivery-epi-list" class="space-y-2 max-h-60 overflow-y-auto border p-2 rounded bg-gray-50">
-                                    <!-- JS Popula checkbox + input qtd -->
+                                    <!-- JS Popula -->
                                 </div>
                             </div>
 
@@ -310,7 +309,7 @@
         </div>
     </div>
 
-    <!-- Modal Cadastro EPI (NOVO) -->
+    <!-- Modal Cadastro EPI -->
     <div id="epiModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 backdrop-blur-sm p-4 no-print">
         <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md transform transition-all m-auto">
             <h2 class="text-xl font-bold text-gray-800 mb-6 border-b pb-2 flex justify-between items-center">
@@ -343,6 +342,36 @@
                     <button type="submit" class="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow font-medium">Salvar EPI</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal Histórico de Entregas (NOVO v0.3) -->
+    <div id="historyModal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex items-center justify-center z-50 backdrop-blur-sm p-4 no-print overflow-y-auto">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl min-h-[500px] flex flex-col transform transition-all m-auto">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800" id="hist-modal-title">Histórico de Entregas</h2>
+                    <p class="text-sm text-gray-500" id="hist-modal-subtitle">Visualizar assinaturas e evidências</p>
+                </div>
+                <button onclick="closeHistoryModal()" class="text-gray-400 hover:text-red-500 transition"><i class="fas fa-times fa-lg"></i></button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-6 scroller">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-xs font-bold text-slate-500 uppercase border-b-2 border-slate-200">
+                            <th class="py-3 px-2">Data</th>
+                            <th class="py-3 px-2">Itens</th>
+                            <th class="py-3 px-2">Entregador</th>
+                            <th class="py-3 px-2 text-center">Assinatura</th>
+                            <th class="py-3 px-2 text-center">Foto</th>
+                            <th class="py-3 px-2 text-right">PDF</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-list" class="divide-y divide-slate-100 text-sm"></tbody>
+                </table>
+                <div id="history-empty" class="hidden text-center py-10 text-gray-400">Nenhuma entrega registrada.</div>
+            </div>
         </div>
     </div>
 
@@ -411,7 +440,7 @@
             });
         }
 
-        // --- GESTÃO DE EPIs (NOVO v0.2) ---
+        // --- GESTÃO DE EPIs ---
         function loadEPIs() {
             const inv = getDB('sc_inventory');
             const tbody = $('epis-table');
@@ -448,7 +477,7 @@
                 ca: $('newEPICA').value,
                 qty: parseInt($('newEPIQty').value),
                 min: parseInt($('newEPIMin').value),
-                icon: 'fa-hard-hat' // Padrão
+                icon: 'fa-hard-hat'
             };
 
             const inv = getDB('sc_inventory');
@@ -456,11 +485,7 @@
             setDB('sc_inventory', inv);
             closeEPIModal();
             loadEPIs();
-            // Limpa form
-            $('newEPIName').value = '';
-            $('newEPICA').value = '';
-            $('newEPIQty').value = '';
-            $('newEPIMin').value = '';
+            $('newEPIName').value = ''; $('newEPICA').value = ''; $('newEPIQty').value = ''; $('newEPIMin').value = '';
         }
 
         function deleteEPI(idx) {
@@ -495,6 +520,7 @@
                         <td class="p-4 text-sm font-mono">${emp.cpf}</td>
                         <td class="p-4 text-center"><span class="text-xs px-2 py-1 rounded-full ${statusColor}">${emp.status}</span></td>
                         <td class="p-4 text-right pr-6">
+                            <button onclick="openHistory(${emp.id})" class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1 rounded text-xs font-bold mr-2"><i class="fas fa-history mr-1"></i> Entregas</button>
                             <button onclick="deleteEmployee(${idx})" class="text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button>
                         </td>
                     </tr>
@@ -544,7 +570,134 @@
             }
         }
 
-        // --- GESTÃO DE ENTREGA (ATUALIZADO v0.2) ---
+        // --- HISTÓRICO DE ENTREGAS (NOVO v0.3) ---
+        function openHistory(empId) {
+            const employees = getDB('sc_employees');
+            const emp = employees.find(e => e.id == empId);
+            if(!emp) return;
+
+            $('historyModal').classList.remove('hidden');
+            $('hist-modal-title').innerText = `Histórico: ${emp.name}`;
+            $('hist-modal-subtitle').innerText = `CPF: ${emp.cpf}`;
+
+            const logs = getDB('sc_logs');
+            // Filtra por ID (se disponível no log) ou Nome como fallback
+            const userLogs = logs.filter(l => (l.empId && l.empId == empId) || l.employee === emp.name);
+            
+            const list = $('history-list');
+            const empty = $('history-empty');
+            list.innerHTML = '';
+
+            if(userLogs.length === 0) {
+                empty.classList.remove('hidden');
+            } else {
+                empty.classList.add('hidden');
+                userLogs.reverse().forEach(log => {
+                    const date = new Date(log.date).toLocaleDateString('pt-BR') + ' ' + new Date(log.date).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+                    const itemsStr = log.items.map(i => `${i.name} (x${i.qty})`).join(', ');
+                    const hasSign = log.signature ? '<span class="text-green-600"><i class="fas fa-check-circle"></i> Digital</span>' : '<span class="text-gray-400">Manual</span>';
+                    const hasPhoto = log.photo ? '<span class="text-green-600"><i class="fas fa-camera"></i> Sim</span>' : '<span class="text-gray-400">Não</span>';
+
+                    // Botão PDF: Se tiver assinatura, gera o PDF completo. Se não, apenas declaração.
+                    const btnAction = log.signature 
+                        ? `<button onclick="printSignedLog(${log.id})" class="text-blue-600 hover:text-blue-800 font-bold text-xs border border-blue-200 px-2 py-1 rounded bg-blue-50">PDF Assinado</button>`
+                        : `<span class="text-gray-400 text-xs">Pendente</span>`;
+
+                    list.innerHTML += `
+                        <tr class="hover:bg-gray-50 border-b border-gray-100">
+                            <td class="py-3 px-2 font-mono text-xs text-gray-600">${date}</td>
+                            <td class="py-3 px-2 font-medium text-gray-800">${itemsStr}</td>
+                            <td class="py-3 px-2 text-gray-500 text-xs">${log.operator || '-'}</td>
+                            <td class="py-3 px-2 text-center text-xs">${hasSign}</td>
+                            <td class="py-3 px-2 text-center text-xs">${hasPhoto}</td>
+                            <td class="py-3 px-2 text-right">${btnAction}</td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        function closeHistoryModal() { $('historyModal').classList.add('hidden'); }
+
+        async function printSignedLog(logId) {
+            const logs = getDB('sc_logs');
+            const log = logs.find(l => l.id == logId);
+            if(!log) return;
+
+            // Busca dados atuais do funcionário para preencher lacunas se necessário
+            const employees = getDB('sc_employees');
+            // Tenta achar pelo nome salvo no log ou empId
+            const emp = employees.find(e => e.name === log.employee) || { name: log.employee, cpf: 'Não informado', role: 'Não informado' };
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setTextColor(0, 0, 0);
+            const margin = 20;
+            let y = 20;
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const maxLineWidth = pageWidth - (margin * 2);
+
+            // --- HEADER ---
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "bold");
+            doc.text("COMPROVANTE DE ENTREGA DE EPI", pageWidth / 2, y, { align: "center" });
+            y += 10;
+
+            // --- INFO ---
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Data da Entrega: ${new Date(log.date).toLocaleString('pt-BR')}`, margin, y);
+            y += 6;
+            doc.text(`Funcionário: ${emp.name}`, margin, y);
+            y += 6;
+            doc.text(`CPF: ${emp.cpf}`, margin, y);
+            y += 6;
+            doc.text(`Entregue por: ${log.operator || 'Sistema'}`, margin, y);
+            y += 10;
+
+            // --- ITENS ---
+            doc.setFont("helvetica", "bold");
+            doc.text("Itens Entregues:", margin, y);
+            y += 6;
+            doc.setFillColor(240, 240, 240);
+            doc.rect(margin, y - 4, maxLineWidth, 6, 'F');
+            doc.setFontSize(9);
+            doc.text("Descrição", margin + 2, y);
+            doc.text("Qtd", pageWidth - margin - 5, y, { align: "right" });
+            y += 6;
+            doc.setFont("helvetica", "normal");
+            log.items.forEach(item => {
+                doc.text(item.name, margin + 2, y);
+                doc.text(item.qty.toString(), pageWidth - margin - 5, y, { align: "right" });
+                doc.setDrawColor(200, 200, 200);
+                doc.line(margin, y + 1, pageWidth - margin, y + 1);
+                y += 6;
+            });
+            y += 10;
+
+            // --- ASSINATURA DIGITAL ---
+            if(log.signature) {
+                doc.setFont("helvetica", "bold");
+                doc.text("Assinatura Digital do Recebedor:", margin, y);
+                y += 5;
+                doc.addImage(log.signature, 'PNG', margin, y, 60, 30);
+                y += 35;
+            }
+
+            // --- FOTO DE EVIDÊNCIA ---
+            if(log.photo) {
+                if (y + 100 > 280) { doc.addPage(); y = 20; }
+                doc.setFont("helvetica", "bold");
+                doc.text("Foto de Evidência (Documento/Entrega):", margin, y);
+                y += 5;
+                // Ajustar proporção da imagem é complexo sem saber dimensões, usando fixo por enquanto
+                doc.addImage(log.photo, 'PNG', margin, y, 100, 100); 
+            }
+
+            doc.save(`Comprovante_${emp.name.replace(/\s+/g, '_')}_${log.id}.pdf`);
+        }
+
+        // --- GESTÃO DE ENTREGA ---
         function loadDeliveryManagement() {
             const emps = getDB('sc_employees');
             const select = $('delivery-employee');
@@ -555,7 +708,6 @@
             const list = $('delivery-epi-list');
             list.innerHTML = '';
             
-            // Lista com Input de Quantidade
             inv.forEach(item => {
                 list.innerHTML += `
                     <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded border-b border-gray-100 last:border-0 transition">
@@ -600,7 +752,6 @@
             const inv = getDB('sc_inventory');
             const items = [];
             
-            // Captura quantidade específica
             checks.forEach(c => {
                 const i = inv.find(x => x.id == c.value);
                 const qtyInput = document.getElementById(`qty-${i.id}`);
@@ -780,7 +931,6 @@
         function logout() { window.location.href='index.html'; }
 
         window.onload = function() {
-            // Seed Data v0.2
             if(!localStorage.getItem('sc_inventory')) { 
                 setDB('sc_inventory', [
                     {id:1, name:'Capacete Azul', qty:45, min:10, ca:'12345'},
